@@ -1,11 +1,6 @@
 {
-  "name": "inline3",
+  "name": "testthree",
   "version": "1.0.0",
-  "environments": [
-    {
-      "name": "production",
-      "entry": "./dist/js/app.js",
-      "assets": "./dist"
-    }
-  ]
+  "assets": "./dist",
+  "function": "./dist/js/app.js"
 }
