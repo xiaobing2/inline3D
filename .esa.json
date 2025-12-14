@@ -1,0 +1,6 @@
+{
+  "name": "inline3",
+  "version": "1.0.0",
+  "entry": "./dist/js/app.js",
+  "assets": "./dist"
+}
