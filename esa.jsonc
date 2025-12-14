@@ -1,11 +1,9 @@
 {
   "name": "inline3",
-  "version": "1.0.0",
-  "environments": [
-    {
-      "name": "production",
-      "entry": "./dist/js/app.js",
-      "assets": "./dist"
-    }
-  ]
+  "entry": "./src/index.js",       // ← 确保此路径指向您的函数入口文件
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "assets": {
+    "directory": "./dist"          // ← 确保此路径是构建后静态资源的输出目录
+  }
 }
