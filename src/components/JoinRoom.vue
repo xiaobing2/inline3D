@@ -39,10 +39,13 @@
       <!-- 模型生成进度显示 -->
       <div v-if="isCheckingStatus" class="status-container">
         <h3>模型生成状态</h3>
-        <div class="progress-bar">
-          <div class="progress" :style="{ width: modelProgress + '%' }"></div>
+        <div class="progress-wrapper">
+          <div class="progress-bar">
+            <div class="progress" :style="{ width: modelProgress + '%' }"></div>
+          </div>
+          <span class="progress-text">{{ modelProgress }}%</span>
         </div>
-        <p>{{ statusMessage }}</p>
+        <p class="status-message">{{ statusMessage }}</p>
         <button @click="stopCheckingStatus" class="stop-button">停止检查</button>
       </div>
     </div>
@@ -430,26 +433,43 @@ export default {
   text-align: center;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 20px;
-  background-color: #e9ecef;
-  border-radius: 10px;
-  overflow: hidden;
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 24px;
+  background-color: #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
 }
 
 .progress {
   height: 100%;
   background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
+  border-radius: 12px;
   transition: width 0.5s ease;
+  min-width: 2%;
 }
 
-.status-container p {
+.progress-text {
+  font-weight: 600;
+  color: #495057;
+  min-width: 50px;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.status-message {
   text-align: center;
   color: #495057;
   margin-bottom: 1rem;
+  font-size: 1rem;
 }
 
 .stop-button {

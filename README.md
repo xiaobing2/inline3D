@@ -48,7 +48,7 @@
 ## 项目部署
 
 本项目已部署在阿里云ESA Pages上，可通过以下URL访问：
-[项目访问地址]（待添加）
+[项目访问地址]https://inline3.2b7c6ce6.er.aliyun-esa.net
 
 项目源码的GitHub仓库地址：
 [GitHub仓库地址]https://github.com/xiaobing2/inline3D
