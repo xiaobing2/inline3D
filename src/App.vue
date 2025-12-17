@@ -27,139 +27,291 @@
         </div>
         <div v-else-if="modelStatus.success" class="success-container">
           <h3>生成成功</h3>
-          <button @click="handleLoadModel" class="load-button">加载模型</button>
+          <button @click="handleLoadModelFromStatus" class="load-button">加载模型</button>
         </div>
       </div>
     </div>
     
     <!-- 原有的3D模型上传和编辑页面 -->
-    <div v-if="currentPage === 'model-editor'">
+    <div v-if="currentPage === 'model-editor'" class="model-editor-page">
       <button @click="handleBack" class="back-button">返回主页</button>
       <header class="app-header">
         <h1>智能3D设计助手平台</h1>
         <p>上传您的3D模型文件，开始设计之旅</p>
       </header>
       
-      <!-- 文件上传区域 -->
-      <div class="upload-section">
-        <div class="upload-container">
-          <input 
-            type="file" 
-            id="fileInput"
-            ref="fileInput" 
-            accept=".glb,.gltf" 
-            @change="handleFileSelect"
-            class="file-input"
-          />
-          <label for="fileInput" class="file-label">
-            <span v-if="!selectedFile">选择GLB/GLTF文件</span>
-            <span v-else>{{ selectedFile.name }}</span>
-          </label>
-          <button 
-            @click="uploadModel" 
-            :disabled="!selectedFile" 
-            class="upload-btn"
-          >
-            上传模型
-          </button>
-          <button 
-            v-if="loadedModel" 
-            @click="saveModel" 
-            class="save-btn"
-          >
-            保存当前模型
-          </button>
+      <div class="main-content-wrapper">
+        <!-- 左侧：3D场景容器 -->
+        <div class="scene-container-wrapper">
+          <div ref="threeContainer" class="three-container"></div>
         </div>
-        <div v-if="uploadStatus" class="upload-status">
-          {{ uploadStatus }}
-        </div>
-      </div>
-      
-      <div class="main-content">
-        <!-- 3D场景容器 -->
-        <div ref="threeContainer" class="three-container"></div>
         
-        <!-- 美化控制面板 -->
-        <div class="control-panel" v-if="loadedModel">
-          <h3>模型美化控制</h3>
-          
-          <!-- 材质控制 -->
-          <div class="control-group">
-            <h4>材质设置</h4>
-            <div class="control-item">
-              <label>模型颜色</label>
-              <input type="color" v-model="materialColor" @change="updateMaterialColor" />
-            </div>
-            <div class="control-item">
-              <label>材质亮度</label>
-              <input type="range" min="0" max="2" step="0.1" v-model.number="materialEmissive" @input="updateMaterialEmissive" />
-            </div>
-            <div class="control-item">
-              <label>材质金属度</label>
-              <input type="range" min="0" max="1" step="0.1" v-model.number="materialMetalness" @input="updateMaterialMetalness" />
-            </div>
-            <div class="control-item">
-              <label>材质粗糙度</label>
-              <input type="range" min="0" max="1" step="0.1" v-model.number="materialRoughness" @input="updateMaterialRoughness" />
-            </div>
+        <!-- 右侧：功能面板 -->
+        <div class="right-panel">
+          <!-- 标签页导航 -->
+          <div class="tabs-nav">
+            <button 
+              :class="['tab-btn', { active: activeTab === 'upload' }]"
+              @click="activeTab = 'upload'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              上传模型
+            </button>
+            <button 
+              :class="['tab-btn', { active: activeTab === 'texture' }]"
+              @click="activeTab = 'texture'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              生成纹理
+            </button>
+            <button 
+              :class="['tab-btn', { active: activeTab === 'history' }]"
+              @click="activeTab = 'history'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              操作历史
+            </button>
           </div>
           
-          <!-- 光照控制 -->
-          <div class="control-group">
-            <h4>光照设置</h4>
-            <div class="control-item">
-              <label>主光源颜色</label>
-              <input type="color" v-model="lightColor" @change="updateLightColor" />
+          <!-- 标签页内容 -->
+          <div class="tabs-content">
+            <!-- 上传模型标签页 -->
+            <div v-show="activeTab === 'upload'" class="tab-panel">
+              <h3>上传模型</h3>
+              <div class="upload-section">
+                <div class="upload-container">
+                  <input 
+                    type="file" 
+                    id="fileInput"
+                    ref="fileInput" 
+                    accept=".glb,.gltf" 
+                    @change="handleFileSelect"
+                    class="file-input"
+                  />
+                  <label for="fileInput" class="file-label">
+                    <span v-if="!selectedFile">选择GLB/GLTF文件</span>
+                    <span v-else>{{ selectedFile.name }}</span>
+                  </label>
+                  <button 
+                    @click="uploadModel" 
+                    :disabled="!selectedFile" 
+                    class="upload-btn"
+                  >
+                    上传模型
+                  </button>
+                  <button 
+                    v-if="loadedModel" 
+                    @click="saveModel" 
+                    class="save-btn"
+                  >
+                    保存当前模型
+                  </button>
+                </div>
+                <div v-if="uploadStatus" class="upload-status">
+                  {{ uploadStatus }}
+                </div>
+              </div>
+              
+              <!-- 美化控制面板 -->
+              <div class="control-panel" v-if="loadedModel">
+                <h3>模型美化控制</h3>
+                
+                <!-- 材质控制 -->
+                <div class="control-group">
+                  <h4>材质设置</h4>
+                  <div class="control-item">
+                    <label>模型颜色</label>
+                    <input type="color" v-model="materialColor" @change="updateMaterialColor" />
+                  </div>
+                  <div class="control-item">
+                    <label>材质亮度</label>
+                    <input type="range" min="0" max="2" step="0.1" v-model.number="materialEmissive" @input="updateMaterialEmissive" />
+                  </div>
+                  <div class="control-item">
+                    <label>材质金属度</label>
+                    <input type="range" min="0" max="1" step="0.1" v-model.number="materialMetalness" @input="updateMaterialMetalness" />
+                  </div>
+                  <div class="control-item">
+                    <label>材质粗糙度</label>
+                    <input type="range" min="0" max="1" step="0.1" v-model.number="materialRoughness" @input="updateMaterialRoughness" />
+                  </div>
+                </div>
+                
+                <!-- 光照控制 -->
+                <div class="control-group">
+                  <h4>光照设置</h4>
+                  <div class="control-item">
+                    <label>主光源颜色</label>
+                    <input type="color" v-model="lightColor" @change="updateLightColor" />
+                  </div>
+                  <div class="control-item">
+                    <label>主光源强度</label>
+                    <input type="range" min="0" max="2" step="0.1" v-model.number="lightIntensity" @input="updateLightIntensity" />
+                  </div>
+                  <div class="control-item">
+                    <label>环境光强度</label>
+                    <input type="range" min="0" max="1" step="0.1" v-model.number="ambientIntensity" @input="updateAmbientIntensity" />
+                  </div>
+                </div>
+                
+                <!-- 场景控制 -->
+                <div class="control-group">
+                  <h4>场景设置</h4>
+                  <div class="control-item">
+                    <label>背景颜色</label>
+                    <input type="color" v-model="backgroundColor" @change="updateBackgroundColor" />
+                  </div>
+                  <div class="control-item">
+                    <label>网格显示</label>
+                    <input type="checkbox" v-model="showGrid" @change="toggleGrid" />
+                  </div>
+                  <div class="control-item">
+                    <label>坐标系显示</label>
+                    <input type="checkbox" v-model="showAxes" @change="toggleAxes" />
+                  </div>
+                </div>
+                
+                <!-- 视角控制 -->
+                <div class="control-group">
+                  <h4>视角预设</h4>
+                  <div class="preset-buttons">
+                    <button @click="setPerspective('front')" class="preset-btn">正面视角</button>
+                    <button @click="setPerspective('side')" class="preset-btn">侧面视角</button>
+                    <button @click="setPerspective('top')" class="preset-btn">俯视视角</button>
+                    <button @click="setPerspective('isometric')" class="preset-btn">等轴视角</button>
+                  </div>
+                </div>
+                
+                <!-- 动画控制 -->
+                <div class="control-group" v-if="hasAnimation">
+                  <h4>动画控制</h4>
+                  <div class="control-item">
+                    <button @click="toggleAnimation" class="preset-btn">
+                      {{ animationPlaying ? '暂停动画' : '播放动画' }}
+                    </button>
+                  </div>
+                  <div class="control-item">
+                    <label>动画速度</label>
+                    <input type="range" min="0.1" max="3" step="0.1" v-model.number="animationSpeed" @input="updateAnimationSpeed" />
+                  </div>
+                </div>
+              </div>
+            
+            <!-- 生成纹理标签页 -->
+            <div v-show="activeTab === 'texture'" class="tab-panel">
+              <h3>生成模型纹理</h3>
+              <div class="texture-generation-section">
+                <div class="texture-tabs">
+                  <button 
+                    :class="['texture-tab-btn', { active: textureMode === 'prompt' }]"
+                    @click="textureMode = 'prompt'"
+                  >
+                    提示词生成
+                  </button>
+                  <button 
+                    :class="['texture-tab-btn', { active: textureMode === 'image' }]"
+                    @click="textureMode = 'image'"
+                  >
+                    图片生成
+                  </button>
+                </div>
+                
+                <!-- 提示词生成模式 -->
+                <div v-if="textureMode === 'prompt'" class="texture-content">
+                  <div class="form-group">
+                    <label>纹理描述提示词</label>
+                    <textarea 
+                      v-model="texturePrompt" 
+                      placeholder="请输入纹理描述，例如：木纹材质、金属质感、粗糙的石头表面..."
+                      rows="4"
+                      :disabled="isGeneratingTexture"
+                    ></textarea>
+                  </div>
+                  <button 
+                    @click="generateTextureFromPrompt" 
+                    :disabled="!texturePrompt.trim() || !loadedModel || isGeneratingTexture"
+                    class="generate-texture-btn"
+                  >
+                    {{ isGeneratingTexture ? '生成中...' : '生成纹理' }}
+                  </button>
+                </div>
+                
+                <!-- 图片生成模式 -->
+                <div v-if="textureMode === 'image'" class="texture-content">
+                  <div class="form-group">
+                    <label>上传参考图片</label>
+                    <input 
+                      type="file" 
+                      id="textureImageInput"
+                      ref="textureImageInput" 
+                      accept="image/*" 
+                      @change="handleTextureImageSelect"
+                      class="file-input"
+                    />
+                    <label for="textureImageInput" class="file-label">
+                      <span v-if="!selectedTextureImage">选择图片文件</span>
+                      <span v-else>{{ selectedTextureImage.name }}</span>
+                    </label>
+                    <div v-if="textureImagePreview" class="image-preview">
+                      <img :src="textureImagePreview" alt="预览" />
+                    </div>
+                  </div>
+                  <button 
+                    @click="generateTextureFromImage" 
+                    :disabled="!selectedTextureImage || !loadedModel || isGeneratingTexture"
+                    class="generate-texture-btn"
+                  >
+                    {{ isGeneratingTexture ? '生成中...' : '生成纹理' }}
+                  </button>
+                </div>
+                
+                <div v-if="textureStatus" class="texture-status">
+                  {{ textureStatus }}
+                </div>
+              </div>
             </div>
-            <div class="control-item">
-              <label>主光源强度</label>
-              <input type="range" min="0" max="2" step="0.1" v-model.number="lightIntensity" @input="updateLightIntensity" />
-            </div>
-            <div class="control-item">
-              <label>环境光强度</label>
-              <input type="range" min="0" max="1" step="0.1" v-model.number="ambientIntensity" @input="updateAmbientIntensity" />
-            </div>
-          </div>
-          
-          <!-- 场景控制 -->
-          <div class="control-group">
-            <h4>场景设置</h4>
-            <div class="control-item">
-              <label>背景颜色</label>
-              <input type="color" v-model="backgroundColor" @change="updateBackgroundColor" />
-            </div>
-            <div class="control-item">
-              <label>网格显示</label>
-              <input type="checkbox" v-model="showGrid" @change="toggleGrid" />
-            </div>
-            <div class="control-item">
-              <label>坐标系显示</label>
-              <input type="checkbox" v-model="showAxes" @change="toggleAxes" />
-            </div>
-          </div>
-          
-          <!-- 视角控制 -->
-          <div class="control-group">
-            <h4>视角预设</h4>
-            <div class="preset-buttons">
-              <button @click="setPerspective('front')" class="preset-btn">正面视角</button>
-              <button @click="setPerspective('side')" class="preset-btn">侧面视角</button>
-              <button @click="setPerspective('top')" class="preset-btn">俯视视角</button>
-              <button @click="setPerspective('isometric')" class="preset-btn">等轴视角</button>
-            </div>
-          </div>
-          
-          <!-- 动画控制 -->
-          <div class="control-group" v-if="hasAnimation">
-            <h4>动画控制</h4>
-            <div class="control-item">
-              <button @click="toggleAnimation" class="preset-btn">
-                {{ animationPlaying ? '暂停动画' : '播放动画' }}
-              </button>
-            </div>
-            <div class="control-item">
-              <label>动画速度</label>
-              <input type="range" min="0.1" max="3" step="0.1" v-model.number="animationSpeed" @input="updateAnimationSpeed" />
+            
+            <!-- 操作历史标签页 -->
+            <div v-show="activeTab === 'history'" class="tab-panel">
+              <h3>操作历史记录</h3>
+              <div class="history-section">
+                <div v-if="operationHistory.length === 0" class="empty-history">
+                  <p>暂无操作记录</p>
+                </div>
+                <div v-else class="history-list">
+                  <div 
+                    v-for="(record, index) in operationHistory" 
+                    :key="index"
+                    class="history-item"
+                  >
+                    <div class="history-header">
+                      <span class="history-user">{{ record.user || '未知用户' }}</span>
+                      <span class="history-time">{{ formatTime(record.timestamp) }}</span>
+                    </div>
+                    <div class="history-action">
+                      <span class="action-type">{{ record.action }}</span>
+                      <span v-if="record.details" class="action-details">{{ record.details }}</span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  v-if="operationHistory.length > 0"
+                  @click="clearHistory" 
+                  class="clear-history-btn"
+                >
+                  清空历史记录
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -225,7 +377,22 @@ export default {
       // 场景控制参数
       backgroundColor: '#f0f0f0',
       showGrid: true,
-      showAxes: true
+      showAxes: true,
+      
+      // 标签页控制
+      activeTab: 'upload', // upload, texture, history
+      
+      // 纹理生成相关
+      textureMode: 'prompt', // prompt 或 image
+      texturePrompt: '',
+      selectedTextureImage: null,
+      textureImagePreview: null,
+      isGeneratingTexture: false,
+      textureStatus: null,
+      
+      // 操作历史记录
+      operationHistory: [],
+      currentUserName: '当前用户' // 可以从登录系统获取
     }
   },
   mounted() {
@@ -257,12 +424,16 @@ export default {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         
+        const filename = `beautified-model-${Date.now()}.glb`;
         link.href = url;
-        link.download = `beautified-model-${Date.now()}.glb`;
+        link.download = filename;
         link.click();
         
         // 清理URL对象
         URL.revokeObjectURL(url);
+        
+        // 记录操作历史
+        this.recordOperation('保存模型', `文件名：${filename}`);
         
         alert('模型保存成功！');
       }, (error) => {
@@ -398,6 +569,9 @@ export default {
             this.animationPlaying = false
           }
           
+          // 记录操作历史
+          this.recordOperation('上传模型', `文件名：${this.selectedFile.name}`)
+          
           this.uploadStatus = '模型加载成功！'
           
           // 5秒后清除状态消息
@@ -473,6 +647,7 @@ export default {
           child.material.color = color
         }
       })
+      this.recordOperation('修改材质颜色', `颜色值：${this.materialColor}`)
     },
     
     updateMaterialEmissive() {
@@ -482,6 +657,7 @@ export default {
           child.material.emissive = new THREE.Color(emissiveIntensity, emissiveIntensity, emissiveIntensity)
         }
       })
+      this.recordOperation('修改材质亮度', `亮度值：${this.materialEmissive}`)
     },
     
     updateMaterialMetalness() {
@@ -490,6 +666,7 @@ export default {
           child.material.metalness = this.materialMetalness
         }
       })
+      this.recordOperation('修改材质金属度', `金属度：${this.materialMetalness}`)
     },
     
     updateMaterialRoughness() {
@@ -498,6 +675,7 @@ export default {
           child.material.roughness = this.materialRoughness
         }
       })
+      this.recordOperation('修改材质粗糙度', `粗糙度：${this.materialRoughness}`)
     },
     
     // 光照控制方法
@@ -536,6 +714,12 @@ export default {
     
     // 视角控制方法
     setPerspective(type) {
+      const perspectiveNames = {
+        'front': '正面视角',
+        'side': '侧面视角',
+        'top': '俯视视角',
+        'isometric': '等轴视角'
+      }
       switch (type) {
         case 'front':
           this.camera.position.set(0, 0, 10)
@@ -552,6 +736,7 @@ export default {
       }
       this.camera.lookAt(0, 0, 0)
       this.controls.update()
+      this.recordOperation('切换视角', perspectiveNames[type] || type)
     },
     
     // 动画控制方法
@@ -900,8 +1085,8 @@ export default {
       }
     },
     
-    // 加载生成成功的模型
-    async handleLoadModel() {
+    // 加载生成成功的模型（从模型状态页面）
+    async handleLoadModelFromStatus() {
       const jobId = localStorage.getItem('modelJobId');
       if (!jobId) {
         alert('未找到任务ID');
@@ -914,42 +1099,47 @@ export default {
         
         // 跳转到模型编辑器页面
         this.currentPage = 'model-editor';
-        // 初始化3D场景
-        this.initThree();
         
-        // 加载生成的模型
-        this.uploadStatus = '正在加载模型...';
-        
-        // 清理之前加载的模型
-        if (this.loadedModel) {
-          this.modelGroup.remove(this.loadedModel);
-          this.loadedModel = null;
-        }
-        
-        // 重置动画混合器
-        if (this.mixer) {
-          this.mixer.stopAllAction();
-          this.mixer = null;
-        }
-        
-        // 使用从后端获取的模型URL
-        const modelUrl = this.modelStatus.modelUrl;
-        
-        console.log('模型URL:', modelUrl);
-        
-        if (!modelUrl) {
-          console.error('模型URL为空，无法加载模型');
-          this.uploadStatus = '模型URL获取失败';
-          return;
-        }
-        
-        // 检查模型格式，如果是.obj格式，需要加载材质
-        if (modelUrl.endsWith('.obj')) {
-          // 加载材质
-          const mtlLoader = new MTLLoader();
-          const mtlUrl = modelUrl.replace('.obj', '.mtl');
+        // 使用$nextTick确保DOM更新后再初始化3D场景和加载模型
+        this.$nextTick(() => {
+          // 初始化3D场景
+          this.initThree();
           
-          mtlLoader.load(
+          // 延迟一点时间确保场景完全初始化后再加载模型
+          setTimeout(() => {
+            // 加载生成的模型
+            this.uploadStatus = '正在加载模型...';
+            
+            // 清理之前加载的模型
+            if (this.loadedModel) {
+              this.modelGroup.remove(this.loadedModel);
+              this.loadedModel = null;
+            }
+            
+            // 重置动画混合器
+            if (this.mixer) {
+              this.mixer.stopAllAction();
+              this.mixer = null;
+            }
+            
+            // 使用从后端获取的模型URL
+            const modelUrl = this.modelStatus.modelUrl;
+            
+            console.log('模型URL:', modelUrl);
+            
+            if (!modelUrl) {
+              console.error('模型URL为空，无法加载模型');
+              this.uploadStatus = '模型URL获取失败';
+              return;
+            }
+            
+            // 检查模型格式，如果是.obj格式，需要加载材质
+            if (modelUrl.endsWith('.obj')) {
+              // 加载材质
+              const mtlLoader = new MTLLoader();
+              const mtlUrl = modelUrl.replace('.obj', '.mtl');
+              
+              mtlLoader.load(
             mtlUrl,
             (materials) => {
               materials.preload();
@@ -993,57 +1183,59 @@ export default {
               const percent = Math.round((progress.loaded / progress.total) * 100);
               this.uploadStatus = `材质加载中... ${percent}%`;
             },
-            (error) => {
-              console.error('材质加载失败:', error);
-              this.uploadStatus = '材质加载失败，请稍后重试';
-            }
-          );
-        } else {
-          // 使用GLTFLoader加载其他格式的模型
-          const loader = new GLTFLoader();
-          
-          loader.load(
-            modelUrl,
-            (gltf) => {
-              console.log('模型加载成功:', gltf);
-              this.loadedModel = gltf.scene;
-              this.modelGroup.add(this.loadedModel);
-              
-              // 自动缩放和定位模型
-              this.autoScaleAndPositionModel(this.loadedModel);
-              
-              // 如果有动画，初始化动画混合器
-              if (gltf.animations && gltf.animations.length > 0) {
-                this.hasAnimation = true;
-                this.animationPlaying = true;
-                this.mixer = new THREE.AnimationMixer(gltf.scene);
-                this.clock = new THREE.Clock();
-                
-                // 播放第一个动画
-                this.clipAction = this.mixer.clipAction(gltf.animations[0]);
-                this.clipAction.play();
-              } else {
-                this.hasAnimation = false;
-                this.animationPlaying = false;
+              (error) => {
+                console.error('材质加载失败:', error);
+                this.uploadStatus = '材质加载失败，请稍后重试';
               }
+            );
+          } else {
+              // 使用GLTFLoader加载其他格式的模型
+              const loader = new GLTFLoader();
               
-              this.uploadStatus = '模型加载成功！';
-              
-              // 5秒后清除状态消息
-              setTimeout(() => {
-                this.uploadStatus = null;
-              }, 5000);
-            },
-            (progress) => {
-              const percent = Math.round((progress.loaded / progress.total) * 100);
-              this.uploadStatus = `模型加载中... ${percent}%`;
-            },
-            (error) => {
-              console.error('模型加载失败:', error);
-              this.uploadStatus = '模型加载失败，请稍后重试';
+              loader.load(
+                modelUrl,
+                (gltf) => {
+                  console.log('模型加载成功:', gltf);
+                  this.loadedModel = gltf.scene;
+                  this.modelGroup.add(this.loadedModel);
+                  
+                  // 自动缩放和定位模型
+                  this.autoScaleAndPositionModel(this.loadedModel);
+                  
+                  // 如果有动画，初始化动画混合器
+                  if (gltf.animations && gltf.animations.length > 0) {
+                    this.hasAnimation = true;
+                    this.animationPlaying = true;
+                    this.mixer = new THREE.AnimationMixer(gltf.scene);
+                    this.clock = new THREE.Clock();
+                    
+                    // 播放第一个动画
+                    this.clipAction = this.mixer.clipAction(gltf.animations[0]);
+                    this.clipAction.play();
+                  } else {
+                    this.hasAnimation = false;
+                    this.animationPlaying = false;
+                  }
+                  
+                  this.uploadStatus = '模型加载成功！';
+                  
+                  // 5秒后清除状态消息
+                  setTimeout(() => {
+                    this.uploadStatus = null;
+                  }, 5000);
+                },
+                (progress) => {
+                  const percent = Math.round((progress.loaded / progress.total) * 100);
+                  this.uploadStatus = `模型加载中... ${percent}%`;
+                },
+                (error) => {
+                  console.error('模型加载失败:', error);
+                  this.uploadStatus = '模型加载失败，请稍后重试';
+                }
+              );
             }
-          );
-        }
+          }, 100);
+        });
       } catch (error) {
         console.error('加载模型失败:', error);
         alert('加载模型失败，请稍后重试');
@@ -1070,6 +1262,142 @@ export default {
       localStorage.removeItem('modelJobId');
       if (this.statusCheckTimer) {
         clearInterval(this.statusCheckTimer);
+      }
+    },
+    
+    // 记录操作历史
+    recordOperation(action, details = '') {
+      const record = {
+        user: this.currentUserName,
+        action: action,
+        details: details,
+        timestamp: new Date()
+      };
+      this.operationHistory.unshift(record); // 添加到开头
+      // 限制历史记录数量，最多保存100条
+      if (this.operationHistory.length > 100) {
+        this.operationHistory = this.operationHistory.slice(0, 100);
+      }
+    },
+    
+    // 处理纹理图片选择
+    handleTextureImageSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        if (file.type.startsWith('image/')) {
+          this.selectedTextureImage = file;
+          // 创建预览
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.textureImagePreview = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          this.textureStatus = '请选择有效的图片文件';
+          this.selectedTextureImage = null;
+          this.textureImagePreview = null;
+        }
+      }
+    },
+    
+    // 从提示词生成纹理
+    async generateTextureFromPrompt() {
+      if (!this.texturePrompt.trim() || !this.loadedModel) {
+        return;
+      }
+      
+      this.isGeneratingTexture = true;
+      this.textureStatus = '正在生成纹理...';
+      
+      try {
+        // TODO: 调用后端API生成纹理
+        // 这里需要根据实际的后端API接口来实现
+        console.log('生成纹理提示词:', this.texturePrompt);
+        
+        // 模拟API调用
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 记录操作历史
+        this.recordOperation('生成纹理', `使用提示词：${this.texturePrompt}`);
+        
+        this.textureStatus = '纹理生成成功！';
+        setTimeout(() => {
+          this.textureStatus = null;
+        }, 3000);
+      } catch (error) {
+        console.error('生成纹理失败:', error);
+        this.textureStatus = '纹理生成失败，请稍后重试';
+      } finally {
+        this.isGeneratingTexture = false;
+      }
+    },
+    
+    // 从图片生成纹理
+    async generateTextureFromImage() {
+      if (!this.selectedTextureImage || !this.loadedModel) {
+        return;
+      }
+      
+      this.isGeneratingTexture = true;
+      this.textureStatus = '正在生成纹理...';
+      
+      try {
+        // TODO: 调用后端API生成纹理
+        // 这里需要根据实际的后端API接口来实现
+        console.log('生成纹理图片:', this.selectedTextureImage.name);
+        
+        // 模拟API调用
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 记录操作历史
+        this.recordOperation('生成纹理', `使用图片：${this.selectedTextureImage.name}`);
+        
+        this.textureStatus = '纹理生成成功！';
+        setTimeout(() => {
+          this.textureStatus = null;
+        }, 3000);
+      } catch (error) {
+        console.error('生成纹理失败:', error);
+        this.textureStatus = '纹理生成失败，请稍后重试';
+      } finally {
+        this.isGeneratingTexture = false;
+      }
+    },
+    
+    // 格式化时间
+    formatTime(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      
+      // 如果小于1分钟，显示"刚刚"
+      if (diff < 60000) {
+        return '刚刚';
+      }
+      // 如果小于1小时，显示分钟
+      if (diff < 3600000) {
+        return `${Math.floor(diff / 60000)}分钟前`;
+      }
+      // 如果小于1天，显示小时
+      if (diff < 86400000) {
+        return `${Math.floor(diff / 3600000)}小时前`;
+      }
+      // 否则显示完整时间
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    },
+    
+    // 清空历史记录
+    clearHistory() {
+      if (confirm('确定要清空所有操作历史记录吗？')) {
+        this.operationHistory = [];
+        this.recordOperation('清空历史记录');
       }
     }
   }
@@ -1302,6 +1630,110 @@ body {
   border: 1px solid #bee5eb;
 }
 
+/* 模型编辑器页面布局 */
+.model-editor-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content-wrapper {
+  display: flex;
+  gap: 2rem;
+  width: 95%;
+  max-width: 1600px;
+  margin: 2rem auto;
+  flex: 1;
+}
+
+.scene-container-wrapper {
+  flex: 1;
+  min-width: 600px;
+}
+
+.three-container {
+  width: 100%;
+  height: 70vh;
+  min-height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+}
+
+.right-panel {
+  width: 400px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  min-height: 600px;
+}
+
+/* 标签页导航 */
+.tabs-nav {
+  display: flex;
+  border-bottom: 2px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 10px 10px 0 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: white;
+}
+
+.tab-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 标签页内容 */
+.tabs-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.tab-panel {
+  height: 100%;
+}
+
+.tab-panel h3 {
+  color: #495057;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
 .main-content {
     display: flex;
     flex-wrap: wrap;
@@ -1312,33 +1744,21 @@ body {
     justify-content: center;
   }
   
-  .three-container {
-    flex: 1;
-    min-width: 300px;
-    height: 600px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    position: relative;
-    overflow: hidden;
-    background: white;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
-  }
-  
   .control-panel {
-    width: 300px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
-    padding: 1.5rem;
+    width: 100%;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
     height: fit-content;
-    max-height: 600px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
   }
   
   .control-panel h3 {
     color: #495057;
     margin-bottom: 1.5rem;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     border-bottom: 2px solid #e9ecef;
     padding-bottom: 0.5rem;
   }
@@ -1381,6 +1801,7 @@ body {
     border-radius: 3px;
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
   }
   
   .control-item input[type="range"]::-webkit-slider-thumb {
@@ -1438,7 +1859,223 @@ body {
   z-index: 10;
 }
 
+/* 纹理生成样式 */
+.texture-generation-section {
+  margin-top: 1rem;
+}
+
+.texture-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.texture-tab-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6c757d;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.texture-tab-btn:hover {
+  color: #495057;
+  background: #f8f9fa;
+}
+
+.texture-tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.texture-content {
+  margin-top: 1rem;
+}
+
+.texture-content .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.texture-content label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #495057;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.texture-content textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.3s ease;
+}
+
+.texture-content textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.image-preview {
+  margin-top: 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.generate-texture-btn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.generate-texture-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.generate-texture-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.texture-status {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+  font-size: 0.9rem;
+}
+
+/* 操作历史样式 */
+.history-section {
+  margin-top: 1rem;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.history-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.history-item:hover {
+  background: #e9ecef;
+  transform: translateX(5px);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.history-user {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.95rem;
+}
+
+.history-time {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.history-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.action-type {
+  font-weight: 500;
+  color: #667eea;
+  font-size: 0.9rem;
+}
+
+.action-details {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.clear-history-btn {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clear-history-btn:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+}
+
 /* 响应式设计 */
+@media (max-width: 1200px) {
+  .main-content-wrapper {
+    flex-direction: column;
+  }
+  
+  .scene-container-wrapper {
+    min-width: 100%;
+  }
+  
+  .right-panel {
+    width: 100%;
+    max-height: none;
+  }
+}
+
 @media (max-width: 768px) {
   .app-header h1 {
     font-size: 2rem;
@@ -1461,7 +2098,21 @@ body {
   
   .three-container {
     height: 400px;
-    width: 95%;
+    min-height: 400px;
+  }
+  
+  .tabs-nav {
+    flex-direction: column;
+  }
+  
+  .tab-btn {
+    border-bottom: 1px solid #e9ecef;
+    border-right: none;
+  }
+  
+  .tab-btn.active {
+    border-bottom-color: #e9ecef;
+    border-left: 3px solid #667eea;
   }
 }
 </style>

@@ -67,6 +67,16 @@ export default {
     }
   },
   methods: {
+    // 规范化URL，确保有协议前缀
+    normalizeUrl(url) {
+      if (!url) return url
+      // 如果URL不以http://或https://开头，添加http://
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return `http://${url}`
+      }
+      return url
+    },
+    
     async joinRoom() {
       if (!this.jobId.trim()) {
         this.errorMessage = '请输入有效的jobid'
@@ -117,14 +127,17 @@ export default {
           // 构建模型URL：target3durl是文件夹路径，需要加上jobId.glb
           let modelUrl = ''
           if (data.target3durl) {
+            // 规范化URL（添加协议前缀）
+            const normalizedUrl = this.normalizeUrl(data.target3durl)
             // 确保URL格式正确，避免双斜杠
-            const baseUrl = data.target3durl.endsWith('/') ? data.target3durl.slice(0, -1) : data.target3durl
+            const baseUrl = normalizedUrl.endsWith('/') ? normalizedUrl.slice(0, -1) : normalizedUrl
             modelUrl = `${baseUrl}/${this.jobId}.glb`
           } else {
             // 如果后端没有返回target3durl，使用默认路径
             modelUrl = `http://localhost:8082/uploads/${this.jobId}/${this.jobId}.glb`
           }
-          const previewImageUrl = data.targetimgurl || ''
+          // 规范化预览图URL
+          const previewImageUrl = data.targetimgurl ? this.normalizeUrl(data.targetimgurl) : ''
           
           console.log('模型URL:', modelUrl)
           console.log('预览图URL:', previewImageUrl)
@@ -232,14 +245,17 @@ export default {
           // 构建模型URL：target3durl是文件夹路径，需要加上jobId.glb
           let modelUrl = ''
           if (data.target3durl) {
+            // 规范化URL（添加协议前缀）
+            const normalizedUrl = this.normalizeUrl(data.target3durl)
             // 确保URL格式正确，避免双斜杠
-            const baseUrl = data.target3durl.endsWith('/') ? data.target3durl.slice(0, -1) : data.target3durl
+            const baseUrl = normalizedUrl.endsWith('/') ? normalizedUrl.slice(0, -1) : normalizedUrl
             modelUrl = `${baseUrl}/${this.jobId}.glb`
           } else {
             // 如果后端没有返回target3durl，使用默认路径
             modelUrl = `http://localhost:8082/uploads/${this.jobId}/${this.jobId}.glb`
           }
-          const previewImageUrl = data.targetimgurl || ''
+          // 规范化预览图URL
+          const previewImageUrl = data.targetimgurl ? this.normalizeUrl(data.targetimgurl) : ''
           
           console.log('模型URL:', modelUrl)
           console.log('预览图URL:', previewImageUrl)
