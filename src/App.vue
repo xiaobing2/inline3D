@@ -1,130 +1,166 @@
 <template>
   <div id="app">
-    <header class="app-header">
-      <h1>智能3D设计助手平台</h1>
-      <p>上传您的3D模型文件，开始设计之旅</p>
-    </header>
+    <!-- 主页 -->
+    <HomePage v-if="currentPage === 'home'" @select-option="handleSelectOption" />
     
-    <!-- 文件上传区域 -->
-    <div class="upload-section">
-      <div class="upload-container">
-        <input 
-          type="file" 
-          id="fileInput"
-          ref="fileInput" 
-          accept=".glb,.gltf" 
-          @change="handleFileSelect"
-          class="file-input"
-        />
-        <label for="fileInput" class="file-label">
-          <span v-if="!selectedFile">选择GLB/GLTF文件</span>
-          <span v-else>{{ selectedFile.name }}</span>
-        </label>
-        <button 
-          @click="uploadModel" 
-          :disabled="!selectedFile" 
-          class="upload-btn"
-        >
-          上传模型
-        </button>
-        <button 
-          v-if="loadedModel" 
-          @click="saveModel" 
-          class="save-btn"
-        >
-          保存当前模型
-        </button>
-      </div>
-      <div v-if="uploadStatus" class="upload-status">
-        {{ uploadStatus }}
+    <!-- 文字生成3D模型页面 -->
+    <TextTo3D v-if="currentPage === 'text-to-3d'" @back="handleBack" @view-model-status="handleViewModelStatus" />
+    
+    <!-- 房间编辑器页面 -->
+    <JoinRoom v-if="currentPage === 'room-editor'" @back="handleBack" @view-model-status="handleViewModelStatus" @load-model="handleLoadModel" />
+    
+    <!-- 模型生成状态页面 -->
+    <div v-if="currentPage === 'model-status'">
+      <button @click="handleBack" class="back-button">返回</button>
+      <div class="model-status-container">
+        <h2>模型生成状态</h2>
+        <div v-if="modelStatus.loading" class="loading-container">
+          <div class="progress-bar">
+            <div class="progress" :style="{ width: modelStatus.progress + '%' }"></div>
+          </div>
+          <p>{{ modelStatus.message }}</p>
+        </div>
+        <div v-else-if="modelStatus.error" class="error-container">
+          <h3>生成失败</h3>
+          <p>{{ modelStatus.error }}</p>
+          <button @click="handleRetry" class="retry-button">重试</button>
+        </div>
+        <div v-else-if="modelStatus.success" class="success-container">
+          <h3>生成成功</h3>
+          <button @click="handleLoadModel" class="load-button">加载模型</button>
+        </div>
       </div>
     </div>
     
-    <div class="main-content">
-      <!-- 3D场景容器 -->
-      <div ref="threeContainer" class="three-container"></div>
+    <!-- 原有的3D模型上传和编辑页面 -->
+    <div v-if="currentPage === 'model-editor'">
+      <button @click="handleBack" class="back-button">返回主页</button>
+      <header class="app-header">
+        <h1>智能3D设计助手平台</h1>
+        <p>上传您的3D模型文件，开始设计之旅</p>
+      </header>
       
-      <!-- 美化控制面板 -->
-      <div class="control-panel" v-if="loadedModel">
-        <h3>模型美化控制</h3>
-        
-        <!-- 材质控制 -->
-        <div class="control-group">
-          <h4>材质设置</h4>
-          <div class="control-item">
-            <label>模型颜色</label>
-            <input type="color" v-model="materialColor" @change="updateMaterialColor" />
-          </div>
-          <div class="control-item">
-            <label>材质亮度</label>
-            <input type="range" min="0" max="2" step="0.1" v-model.number="materialEmissive" @input="updateMaterialEmissive" />
-          </div>
-          <div class="control-item">
-            <label>材质金属度</label>
-            <input type="range" min="0" max="1" step="0.1" v-model.number="materialMetalness" @input="updateMaterialMetalness" />
-          </div>
-          <div class="control-item">
-            <label>材质粗糙度</label>
-            <input type="range" min="0" max="1" step="0.1" v-model.number="materialRoughness" @input="updateMaterialRoughness" />
-          </div>
+      <!-- 文件上传区域 -->
+      <div class="upload-section">
+        <div class="upload-container">
+          <input 
+            type="file" 
+            id="fileInput"
+            ref="fileInput" 
+            accept=".glb,.gltf" 
+            @change="handleFileSelect"
+            class="file-input"
+          />
+          <label for="fileInput" class="file-label">
+            <span v-if="!selectedFile">选择GLB/GLTF文件</span>
+            <span v-else>{{ selectedFile.name }}</span>
+          </label>
+          <button 
+            @click="uploadModel" 
+            :disabled="!selectedFile" 
+            class="upload-btn"
+          >
+            上传模型
+          </button>
+          <button 
+            v-if="loadedModel" 
+            @click="saveModel" 
+            class="save-btn"
+          >
+            保存当前模型
+          </button>
         </div>
-        
-        <!-- 光照控制 -->
-        <div class="control-group">
-          <h4>光照设置</h4>
-          <div class="control-item">
-            <label>主光源颜色</label>
-            <input type="color" v-model="lightColor" @change="updateLightColor" />
-          </div>
-          <div class="control-item">
-            <label>主光源强度</label>
-            <input type="range" min="0" max="2" step="0.1" v-model.number="lightIntensity" @input="updateLightIntensity" />
-          </div>
-          <div class="control-item">
-            <label>环境光强度</label>
-            <input type="range" min="0" max="1" step="0.1" v-model.number="ambientIntensity" @input="updateAmbientIntensity" />
-          </div>
+        <div v-if="uploadStatus" class="upload-status">
+          {{ uploadStatus }}
         </div>
+      </div>
+      
+      <div class="main-content">
+        <!-- 3D场景容器 -->
+        <div ref="threeContainer" class="three-container"></div>
         
-        <!-- 场景控制 -->
-        <div class="control-group">
-          <h4>场景设置</h4>
-          <div class="control-item">
-            <label>背景颜色</label>
-            <input type="color" v-model="backgroundColor" @change="updateBackgroundColor" />
+        <!-- 美化控制面板 -->
+        <div class="control-panel" v-if="loadedModel">
+          <h3>模型美化控制</h3>
+          
+          <!-- 材质控制 -->
+          <div class="control-group">
+            <h4>材质设置</h4>
+            <div class="control-item">
+              <label>模型颜色</label>
+              <input type="color" v-model="materialColor" @change="updateMaterialColor" />
+            </div>
+            <div class="control-item">
+              <label>材质亮度</label>
+              <input type="range" min="0" max="2" step="0.1" v-model.number="materialEmissive" @input="updateMaterialEmissive" />
+            </div>
+            <div class="control-item">
+              <label>材质金属度</label>
+              <input type="range" min="0" max="1" step="0.1" v-model.number="materialMetalness" @input="updateMaterialMetalness" />
+            </div>
+            <div class="control-item">
+              <label>材质粗糙度</label>
+              <input type="range" min="0" max="1" step="0.1" v-model.number="materialRoughness" @input="updateMaterialRoughness" />
+            </div>
           </div>
-          <div class="control-item">
-            <label>网格显示</label>
-            <input type="checkbox" v-model="showGrid" @change="toggleGrid" />
+          
+          <!-- 光照控制 -->
+          <div class="control-group">
+            <h4>光照设置</h4>
+            <div class="control-item">
+              <label>主光源颜色</label>
+              <input type="color" v-model="lightColor" @change="updateLightColor" />
+            </div>
+            <div class="control-item">
+              <label>主光源强度</label>
+              <input type="range" min="0" max="2" step="0.1" v-model.number="lightIntensity" @input="updateLightIntensity" />
+            </div>
+            <div class="control-item">
+              <label>环境光强度</label>
+              <input type="range" min="0" max="1" step="0.1" v-model.number="ambientIntensity" @input="updateAmbientIntensity" />
+            </div>
           </div>
-          <div class="control-item">
-            <label>坐标系显示</label>
-            <input type="checkbox" v-model="showAxes" @change="toggleAxes" />
+          
+          <!-- 场景控制 -->
+          <div class="control-group">
+            <h4>场景设置</h4>
+            <div class="control-item">
+              <label>背景颜色</label>
+              <input type="color" v-model="backgroundColor" @change="updateBackgroundColor" />
+            </div>
+            <div class="control-item">
+              <label>网格显示</label>
+              <input type="checkbox" v-model="showGrid" @change="toggleGrid" />
+            </div>
+            <div class="control-item">
+              <label>坐标系显示</label>
+              <input type="checkbox" v-model="showAxes" @change="toggleAxes" />
+            </div>
           </div>
-        </div>
-        
-        <!-- 视角控制 -->
-        <div class="control-group">
-          <h4>视角预设</h4>
-          <div class="preset-buttons">
-            <button @click="setPerspective('front')" class="preset-btn">正面视角</button>
-            <button @click="setPerspective('side')" class="preset-btn">侧面视角</button>
-            <button @click="setPerspective('top')" class="preset-btn">俯视视角</button>
-            <button @click="setPerspective('isometric')" class="preset-btn">等轴视角</button>
+          
+          <!-- 视角控制 -->
+          <div class="control-group">
+            <h4>视角预设</h4>
+            <div class="preset-buttons">
+              <button @click="setPerspective('front')" class="preset-btn">正面视角</button>
+              <button @click="setPerspective('side')" class="preset-btn">侧面视角</button>
+              <button @click="setPerspective('top')" class="preset-btn">俯视视角</button>
+              <button @click="setPerspective('isometric')" class="preset-btn">等轴视角</button>
+            </div>
           </div>
-        </div>
-        
-        <!-- 动画控制 -->
-        <div class="control-group" v-if="hasAnimation">
-          <h4>动画控制</h4>
-          <div class="control-item">
-            <button @click="toggleAnimation" class="preset-btn">
-              {{ animationPlaying ? '暂停动画' : '播放动画' }}
-            </button>
-          </div>
-          <div class="control-item">
-            <label>动画速度</label>
-            <input type="range" min="0.1" max="3" step="0.1" v-model.number="animationSpeed" @input="updateAnimationSpeed" />
+          
+          <!-- 动画控制 -->
+          <div class="control-group" v-if="hasAnimation">
+            <h4>动画控制</h4>
+            <div class="control-item">
+              <button @click="toggleAnimation" class="preset-btn">
+                {{ animationPlaying ? '暂停动画' : '播放动画' }}
+              </button>
+            </div>
+            <div class="control-item">
+              <label>动画速度</label>
+              <input type="range" min="0.1" max="3" step="0.1" v-model.number="animationSpeed" @input="updateAnimationSpeed" />
+            </div>
           </div>
         </div>
       </div>
@@ -136,13 +172,24 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import Stats from 'three/examples/jsm/libs/stats.module.js'
+import HomePage from './components/HomePage.vue'
+import TextTo3D from './components/TextTo3D.vue'
+import JoinRoom from './components/JoinRoom.vue'
 
 export default {
   name: 'App',
+  components: {
+    HomePage,
+    TextTo3D,
+    JoinRoom
+  },
   data() {
     return {
+      currentPage: 'home', // 页面状态：home, text-to-3d, image-to-3d, room-editor, model-editor, model-status
       mixer: null,
       clock: null,
       animationId: null,
@@ -152,6 +199,17 @@ export default {
       hasAnimation: false,
       animationPlaying: false,
       animationSpeed: 1.0,
+      
+      // 模型生成状态
+      modelStatus: {
+        loading: true,
+        progress: 0,
+        message: '模型生成中，请稍候...',
+        success: false,
+        error: null,
+        previewImageUrl: '',
+        modelUrl: ''
+      },
       
       // 材质控制参数
       materialColor: '#ffffff',
@@ -171,8 +229,7 @@ export default {
     }
   },
   mounted() {
-    // 在组件挂载后执行 Three.js 代码
-    this.initThree()
+    // 初始页面为首页，不自动初始化3D场景
   },
   beforeDestroy() {
     // 组件销毁前清理资源
@@ -576,6 +633,444 @@ export default {
           }
         })
       }
+    },
+    
+    // 页面切换方法
+    handleSelectOption(option) {
+      switch(option) {
+        case 'text-to-3d':
+          this.currentPage = 'text-to-3d';
+          break;
+        case 'image-to-3d':
+          this.currentPage = 'image-to-3d';
+          break;
+        case 'room-editor':
+          this.currentPage = 'room-editor';
+          break;
+        case 'model-editor':
+          this.currentPage = 'model-editor';
+          this.initThree(); // 初始化3D场景
+          break;
+        default:
+          this.currentPage = 'home';
+      }
+    },
+    
+    // 处理加载模型事件（来自JoinRoom组件）
+    handleLoadModel(modelData) {
+      // 保存模型数据到状态
+      this.modelStatus = {
+        loading: false,
+        success: true,
+        progress: 100,
+        message: '模型加载成功！',
+        error: null,
+        previewImageUrl: modelData.previewImageUrl,
+        modelUrl: modelData.modelUrl
+      };
+      
+      // 跳转到模型编辑器页面
+      this.currentPage = 'model-editor';
+      
+      // 使用$nextTick确保DOM更新后再初始化3D场景和加载模型
+      this.$nextTick(() => {
+        // 初始化3D场景
+        this.initThree();
+        
+        // 延迟一点时间确保场景完全初始化后再加载模型
+        setTimeout(() => {
+          // 加载模型
+          this.loadModelFromUrl(modelData.modelUrl);
+        }, 100);
+      });
+    },
+    
+    // 从URL加载模型
+    async loadModelFromUrl(modelUrl) {
+      try {
+        console.log('开始加载模型:', modelUrl);
+        
+        // 加载生成的模型
+        this.uploadStatus = '正在加载模型...';
+        
+        // 清理之前加载的模型
+        if (this.loadedModel) {
+          this.modelGroup.remove(this.loadedModel);
+          this.loadedModel = null;
+        }
+        
+        // 重置动画混合器
+        if (this.mixer) {
+          this.mixer.stopAllAction();
+          this.mixer = null;
+        }
+        
+        // 使用GLTFLoader加载模型
+        const loader = new GLTFLoader();
+        
+        loader.load(
+          modelUrl,
+          (gltf) => {
+            console.log('模型加载成功:', gltf);
+            this.loadedModel = gltf.scene;
+            this.modelGroup.add(this.loadedModel);
+            
+            // 自动缩放和定位模型
+            this.autoScaleAndPositionModel(this.loadedModel);
+            
+            // 如果有动画，初始化动画混合器
+            if (gltf.animations && gltf.animations.length > 0) {
+              this.hasAnimation = true;
+              this.animationPlaying = true;
+              this.mixer = new THREE.AnimationMixer(gltf.scene);
+              this.clock = new THREE.Clock();
+              
+              // 播放第一个动画
+              this.clipAction = this.mixer.clipAction(gltf.animations[0]);
+              this.clipAction.play();
+            } else {
+              this.hasAnimation = false;
+              this.animationPlaying = false;
+            }
+            
+            this.uploadStatus = '模型加载成功！';
+            
+            // 5秒后清除状态消息
+            setTimeout(() => {
+              this.uploadStatus = null;
+            }, 5000);
+          },
+          (progress) => {
+            const percent = Math.round((progress.loaded / progress.total) * 100);
+            this.uploadStatus = `模型加载中... ${percent}%`;
+          },
+          (error) => {
+            console.error('模型加载失败:', error);
+            this.uploadStatus = '模型加载失败，请稍后重试';
+          }
+        );
+      } catch (error) {
+        console.error('加载模型失败:', error);
+        this.uploadStatus = '模型加载失败，请稍后重试';
+      }
+    },
+    
+    // 处理查看模型状态事件
+    handleViewModelStatus() {
+      this.currentPage = 'model-status';
+      // 初始化模型状态
+      this.modelStatus = {
+        loading: true,
+        progress: 0,
+        message: '模型生成中，请稍候...',
+        success: false,
+        error: null,
+        previewImageUrl: '',
+        modelUrl: ''
+      };
+      // 开始定期检查模型状态
+      this.startCheckingModelStatus();
+    },
+    
+    // 开始定期检查模型状态
+    startCheckingModelStatus() {
+      // 清除可能存在的旧定时器
+      if (this.statusCheckTimer) {
+        clearInterval(this.statusCheckTimer);
+      }
+      // 每5秒检查一次模型状态
+      this.statusCheckTimer = setInterval(() => {
+        this.checkModelStatus();
+      }, 5000);
+      // 立即检查一次
+      this.checkModelStatus();
+    },
+    
+    // 检查模型生成状态
+    async checkModelStatus() {
+      const jobId = localStorage.getItem('modelJobId');
+      if (!jobId) {
+        this.modelStatus.error = '未找到任务ID';
+        this.modelStatus.loading = false;
+        return;
+      }
+      
+      try {
+        const response = await fetch('http://localhost:8082/api/models/status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ jobId })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('模型状态检查结果(完整数据):', JSON.stringify(data));
+        console.log('模型状态值:', data.status);
+        
+        // 处理腾讯云API返回的字符串状态或后端返回的数字状态
+        let status = data.status;
+        
+        // 如果是字符串状态（来自腾讯云API）
+        if (typeof status === 'string') {
+          status = status.toUpperCase();
+          
+          if (status === 'RUN') {
+            // 运行中
+            this.modelStatus.loading = true;
+            // 假进度：每次增加5-10%，最高到90%
+            this.modelStatus.progress += Math.floor(Math.random() * 6) + 5; // 5-10%的随机增量
+            if (this.modelStatus.progress > 90) {
+              this.modelStatus.progress = 90;
+            }
+            this.modelStatus.message = '模型正在生成中...';
+            return;
+          } else if (status === 'FAIL' || status === 'FAILED') {
+            // 生成失败
+            this.modelStatus.loading = false;
+            this.modelStatus.error = '模型生成失败，请稍后重试';
+            // 清除定时器
+            clearInterval(this.statusCheckTimer);
+            return;
+          } else if (status === 'DONE' || status === 'SUCCEEDED' || status === 'SUCCESS') {
+            // 生成成功
+            status = 3;
+          }
+        } else {
+          // 如果是数字状态（来自后端转换）
+          status = parseInt(status);
+        }
+        
+        // 处理数字状态
+        if (status === 0) {
+          // 等待中
+          this.modelStatus.loading = true;
+          this.modelStatus.progress += 5;
+          if (this.modelStatus.progress > 90) {
+            this.modelStatus.progress = 90;
+          }
+          this.modelStatus.message = '模型排队等待中...';
+        } else if (status === 1) {
+          // 生成中
+          this.modelStatus.loading = true;
+          this.modelStatus.progress += 10;
+          if (this.modelStatus.progress > 90) {
+            this.modelStatus.progress = 90;
+          }
+          this.modelStatus.message = '模型正在生成中...';
+        } else if (status === 2) {
+          // 生成失败
+          this.modelStatus.loading = false;
+          this.modelStatus.error = '模型生成失败，请稍后重试';
+          // 清除定时器
+          clearInterval(this.statusCheckTimer);
+        } else if (status === 3) {
+          // 生成成功
+          this.modelStatus.loading = false;
+          this.modelStatus.success = true;
+          this.modelStatus.progress = 100;
+          this.modelStatus.message = '模型生成成功！';
+          
+          // 保存模型URL信息
+          this.modelStatus.previewImageUrl = data.targetimgurl || '';
+          this.modelStatus.modelUrl = data.target3durl || '';
+          
+          console.log('更新后的模型状态:', JSON.stringify(this.modelStatus));
+          
+          // 清除定时器
+          clearInterval(this.statusCheckTimer);
+        } else {
+          // 未知状态
+          console.log('未知的模型状态:', status);
+          this.modelStatus.loading = false;
+          this.modelStatus.error = '未知的模型状态';
+          // 清除定时器
+          clearInterval(this.statusCheckTimer);
+        }
+      } catch (error) {
+        console.error('检查模型状态失败:', error);
+        this.modelStatus.loading = false;
+        this.modelStatus.error = '检查模型状态失败，请稍后重试';
+        // 清除定时器
+        clearInterval(this.statusCheckTimer);
+      }
+    },
+    
+    // 加载生成成功的模型
+    async handleLoadModel() {
+      const jobId = localStorage.getItem('modelJobId');
+      if (!jobId) {
+        alert('未找到任务ID');
+        return;
+      }
+      
+      try {
+        console.log('开始加载模型...');
+        console.log('当前模型状态:', JSON.stringify(this.modelStatus));
+        
+        // 跳转到模型编辑器页面
+        this.currentPage = 'model-editor';
+        // 初始化3D场景
+        this.initThree();
+        
+        // 加载生成的模型
+        this.uploadStatus = '正在加载模型...';
+        
+        // 清理之前加载的模型
+        if (this.loadedModel) {
+          this.modelGroup.remove(this.loadedModel);
+          this.loadedModel = null;
+        }
+        
+        // 重置动画混合器
+        if (this.mixer) {
+          this.mixer.stopAllAction();
+          this.mixer = null;
+        }
+        
+        // 使用从后端获取的模型URL
+        const modelUrl = this.modelStatus.modelUrl;
+        
+        console.log('模型URL:', modelUrl);
+        
+        if (!modelUrl) {
+          console.error('模型URL为空，无法加载模型');
+          this.uploadStatus = '模型URL获取失败';
+          return;
+        }
+        
+        // 检查模型格式，如果是.obj格式，需要加载材质
+        if (modelUrl.endsWith('.obj')) {
+          // 加载材质
+          const mtlLoader = new MTLLoader();
+          const mtlUrl = modelUrl.replace('.obj', '.mtl');
+          
+          mtlLoader.load(
+            mtlUrl,
+            (materials) => {
+              materials.preload();
+              
+              // 加载模型
+              const objLoader = new OBJLoader();
+              objLoader.setMaterials(materials);
+              
+              objLoader.load(
+                modelUrl,
+                (object) => {
+                  console.log('模型加载成功:', object);
+                  this.loadedModel = object;
+                  this.modelGroup.add(this.loadedModel);
+                  
+                  // 自动缩放和定位模型
+                  this.autoScaleAndPositionModel(this.loadedModel);
+                  
+                  // OBJ模型通常没有动画
+                  this.hasAnimation = false;
+                  this.animationPlaying = false;
+                  
+                  this.uploadStatus = '模型加载成功！';
+                  
+                  // 5秒后清除状态消息
+                  setTimeout(() => {
+                    this.uploadStatus = null;
+                  }, 5000);
+                },
+                (progress) => {
+                  const percent = Math.round((progress.loaded / progress.total) * 100);
+                  this.uploadStatus = `模型加载中... ${percent}%`;
+                },
+                (error) => {
+                  console.error('模型加载失败:', error);
+                  this.uploadStatus = '模型加载失败，请稍后重试';
+                }
+              );
+            },
+            (progress) => {
+              const percent = Math.round((progress.loaded / progress.total) * 100);
+              this.uploadStatus = `材质加载中... ${percent}%`;
+            },
+            (error) => {
+              console.error('材质加载失败:', error);
+              this.uploadStatus = '材质加载失败，请稍后重试';
+            }
+          );
+        } else {
+          // 使用GLTFLoader加载其他格式的模型
+          const loader = new GLTFLoader();
+          
+          loader.load(
+            modelUrl,
+            (gltf) => {
+              console.log('模型加载成功:', gltf);
+              this.loadedModel = gltf.scene;
+              this.modelGroup.add(this.loadedModel);
+              
+              // 自动缩放和定位模型
+              this.autoScaleAndPositionModel(this.loadedModel);
+              
+              // 如果有动画，初始化动画混合器
+              if (gltf.animations && gltf.animations.length > 0) {
+                this.hasAnimation = true;
+                this.animationPlaying = true;
+                this.mixer = new THREE.AnimationMixer(gltf.scene);
+                this.clock = new THREE.Clock();
+                
+                // 播放第一个动画
+                this.clipAction = this.mixer.clipAction(gltf.animations[0]);
+                this.clipAction.play();
+              } else {
+                this.hasAnimation = false;
+                this.animationPlaying = false;
+              }
+              
+              this.uploadStatus = '模型加载成功！';
+              
+              // 5秒后清除状态消息
+              setTimeout(() => {
+                this.uploadStatus = null;
+              }, 5000);
+            },
+            (progress) => {
+              const percent = Math.round((progress.loaded / progress.total) * 100);
+              this.uploadStatus = `模型加载中... ${percent}%`;
+            },
+            (error) => {
+              console.error('模型加载失败:', error);
+              this.uploadStatus = '模型加载失败，请稍后重试';
+            }
+          );
+        }
+      } catch (error) {
+        console.error('加载模型失败:', error);
+        alert('加载模型失败，请稍后重试');
+      }
+    },
+    
+    // 重试生成模型
+    handleRetry() {
+      // 跳回文字生成页面
+      this.currentPage = 'text-to-3d';
+      // 清除jobId
+      localStorage.removeItem('modelJobId');
+      // 清除定时器
+      if (this.statusCheckTimer) {
+        clearInterval(this.statusCheckTimer);
+      }
+    },
+    
+    // 返回主页
+    handleBack() {
+      this.currentPage = 'home';
+      this.cleanup(); // 清理3D场景资源
+      // 清除jobId和定时器
+      localStorage.removeItem('modelJobId');
+      if (this.statusCheckTimer) {
+        clearInterval(this.statusCheckTimer);
+      }
     }
   }
 }
@@ -656,6 +1151,70 @@ body {
   min-width: 200px;
 }
 
+/* 模型状态页面样式 */
+.model-status-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.model-status-container h2 {
+  color: #495057;
+  margin-bottom: 2rem;
+}
+
+.loading-container {
+  margin: 2rem 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background-color: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.error-container {
+  color: #f44336;
+  margin: 2rem 0;
+}
+
+.success-container {
+  color: #4CAF50;
+  margin: 2rem 0;
+}
+
+.retry-button, .load-button {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.retry-button:hover, .load-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
 .file-label:hover {
   background: #dee2e6;
 }
@@ -688,6 +1247,26 @@ body {
 }
 
 .save-btn:hover {
+  background: #43A047;
+  transform: translateY(-2px);
+}
+
+.back-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 0.8rem 2rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.back-button:hover {
   background: #43A047;
   transform: translateY(-2px);
 }
