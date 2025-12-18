@@ -47,6 +47,7 @@
       <button @click="handleBack" class="back-button">返回主页</button>
       <header class="app-header">
         <h1>智能3D设计助手平台</h1>
+        <p>房间号: {{ currentJobId }}</p>
       </header>
       
       <div class="main-content-wrapper">
@@ -1207,7 +1208,10 @@ export default {
         modelUrl: modelData.modelUrl
       }
       this.currentPage = 'model-editor'
-      this.updateQuery({ page: 'model-editor', modelUrl: modelData.modelUrl })
+      this.currentJobId = modelData.jobId;
+      this.currentJobId = modelData.jobId;
+      this.currentJobId = modelData.jobId;
+      this.updateQuery({ page: 'model-editor', modelUrl: modelData.modelUrl, jobId: modelData.jobId });
       this.$nextTick(() => {
         this.initThree()
         setTimeout(() => { this.loadModelFromUrl(modelData.modelUrl) }, 100)
@@ -1367,7 +1371,8 @@ export default {
       if (!jobId) { alert('未找到任务ID'); return }
       try {
         this.currentPage = 'model-editor'
-        this.updateQuery({ page: 'model-editor', modelUrl: this.modelStatus.modelUrl })
+        this.currentJobId = jobId;
+        this.updateQuery({ page: 'model-editor', modelUrl: this.modelStatus.modelUrl, jobId: jobId });
         this.$nextTick(() => {
           this.initThree();
           setTimeout(() => {
@@ -1489,6 +1494,17 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .app-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 3rem 2rem; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
 .app-header h1 { font-size: 2.5rem; margin-bottom: .5rem; font-weight: 700; }
 .app-header p { font-size: 1.1rem; opacity: .9; }
+
+.room-id-display {
+  font-size: 1rem;
+  color: #e9ecef;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  display: inline-block;
+  word-break: break-all;
+}
 
 .upload-section { padding: 2rem; background: white; margin: 2rem auto; border-radius: 10px; box-shadow: 0 2px 20px rgba(0,0,0,0.05); width: 90%; max-width: 800px; text-align: center; }
 .upload-container { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: center; margin-bottom: 1rem; }
