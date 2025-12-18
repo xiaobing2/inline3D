@@ -47,7 +47,6 @@
       <button @click="handleBack" class="back-button">返回主页</button>
       <header class="app-header">
         <h1>智能3D设计助手平台</h1>
-        <p>上传您的3D模型文件，开始设计之旅</p>
       </header>
       
       <div class="main-content-wrapper">
@@ -577,8 +576,9 @@ export default {
     syncPageFromQuery() {
       const params = new URLSearchParams(window.location.search)
       const page = params.get('page') || 'home'
-      const modelUrl = params.get('modelUrl')
-      const jobId = params.get('jobId')
+      const modelUrl = params.get('modelUrl');
+      const jobId = params.get('jobId');
+      this.currentJobId = jobId; // 确保刷新时也能获取jobId
 
       // 如果切换离开编辑页，先做清理
       if (this.currentPage === 'model-editor' && page !== 'model-editor') {
@@ -1369,32 +1369,11 @@ export default {
         this.currentPage = 'model-editor'
         this.updateQuery({ page: 'model-editor', modelUrl: this.modelStatus.modelUrl })
         this.$nextTick(() => {
-          this.initThree()
+          this.initThree();
           setTimeout(() => {
-            this.uploadStatus = '正在加载模型...'
-            if (this.loadedModel) { this.modelGroup.remove(this.loadedModel); this.loadedModel = null }
-            if (this.mixer) { this.mixer.stopAllAction(); this.mixer = null }
-            const modelUrl = this.modelStatus.modelUrl
-            if (!modelUrl) { this.uploadStatus = '模型URL获取失败'; return }
-            const loader = new GLTFLoader()
-            loader.load(
-              modelUrl,
-              (gltf) => {
-                this.loadedModel = gltf.scene
-                this.modelGroup.add(this.loadedModel)
-                this.applyShadows()
-                this.autoScaleAndPositionModel(this.loadedModel)
-                if (gltf.animations && gltf.animations.length > 0) {
-                  this.hasAnimation = true; this.animationPlaying = true; this.mixer = new THREE.AnimationMixer(gltf.scene); this.clock = new THREE.Clock(); this.clipAction = this.mixer.clipAction(gltf.animations[0]); this.clipAction.play()
-                } else { this.hasAnimation = false; this.animationPlaying = false }
-                this.uploadStatus = '模型加载成功！'
-                setTimeout(() => { this.uploadStatus = null }, 5000)
-              },
-              (progress) => { const percent = Math.round((progress.loaded / progress.total) * 100); this.uploadStatus = `模型加载中... ${percent}%` },
-              (error) => { console.error('模型加载失败:', error); this.uploadStatus = '模型加载失败，请稍后重试' }
-            )
-          }, 100)
-        })
+            this.loadModelFromUrl(this.modelStatus.modelUrl);
+          }, 100);
+        });
       } catch (error) {
         console.error('加载模型失败:', error)
         alert('加载模型失败，请稍后重试')
