@@ -1,6 +1,6 @@
 # 智能3D设计助手平台
 
-本项目由阿里云ESA提供加速、计算和保护![alt text](image.png)
+本项目由阿里云ESA提供加速、计算和保护!![alt text](image-1.png)
 
 ## 项目介绍
 
