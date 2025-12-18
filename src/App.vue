@@ -463,6 +463,7 @@ export default {
   data() {
     return {
       currentJobId: null, // 当前任务ID
+      isModelLoading: false, // 模型是否正在加载
       currentPage: 'home', // 页面状态：home, text-to-3d, image-to-3d, room-editor, model-editor, model-status
       mixer: null,
       clock: null,

@@ -72,7 +72,7 @@ export default {
       if (!url) return url
       // 如果URL不以http://或https://开头，添加http://
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        return `http://${url}`
+        return `https://${url}`
       }
       return url
     },

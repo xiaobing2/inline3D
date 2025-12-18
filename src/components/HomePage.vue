@@ -236,7 +236,7 @@ export default {
     closeJoinModal() { this.disposeFx3D(); this.stopJoinChecking(); this.showJoinModal = false; this.jobIdJoin = ''; this.joinError = null },
     normalizeUrl(url) {
       if (!url) return url
-      if (!url.startsWith('http://') && !url.startsWith('https://')) return `http://${url}`
+      if (!url.startsWith('http://') && !url.startsWith('https://')) return `https://${url}`
       return url
     },
     async joinRoomFromModal() {
