@@ -19,6 +19,11 @@
       <button @click="handleBack" class="back-button">返回</button>
       <div class="model-status-container">
         <h2>模型生成状态</h2>
+      <div v-if="currentJobId" class="job-id-container">
+        <span class="job-id-text">任务ID: {{ currentJobId }}</span>
+        <button @click="copyJobId" class="copy-btn">复制</button>
+      </div>
+      <p v-if="currentJobId" class="job-id-hint">你可以使用此ID在“在线编辑”中随时返回查看或编辑模型。</p>
         <div v-if="modelStatus.loading" class="loading-container">
           <div class="progress-bar">
             <div class="progress" :style="{ width: modelStatus.progress + '%' }"></div>
@@ -457,6 +462,7 @@ export default {
   },
   data() {
     return {
+      currentJobId: null, // 当前任务ID
       currentPage: 'home', // 页面状态：home, text-to-3d, image-to-3d, room-editor, model-editor, model-status
       mixer: null,
       clock: null,
@@ -579,7 +585,8 @@ export default {
         })
       } else if (page === 'model-status') {
         if (jobId) {
-          localStorage.setItem('modelJobId', jobId)
+          localStorage.setItem('modelJobId', jobId);
+          this.currentJobId = jobId;
         }
         // 初始化模型状态并开始轮询
         this.modelStatus = {
@@ -1253,6 +1260,7 @@ export default {
       }
       this.currentPage = 'model-status'
       this.modelStatus = { loading: true, progress: 0, message: '模型生成中，请稍候...', success: false, error: null, previewImageUrl: '', modelUrl: '' }
+      this.currentJobId = jobId;
       this.updateQuery({ page: 'model-status', jobId })
       this.startCheckingModelStatus()
     },
@@ -1260,6 +1268,7 @@ export default {
       this.currentPage = 'model-status'
       this.modelStatus = { loading: true, progress: 0, message: '模型生成中，请稍候...', success: false, error: null, previewImageUrl: '', modelUrl: '' }
       const jobId = localStorage.getItem('modelJobId') || ''
+      this.currentJobId = jobId;
       this.updateQuery({ page: 'model-status', jobId })
       this.startCheckingModelStatus()
     },
@@ -1366,6 +1375,19 @@ export default {
       } catch (error) {
         console.error('加载模型失败:', error)
         alert('加载模型失败，请稍后重试')
+      }
+    },
+
+    copyJobId() {
+      if (this.currentJobId) {
+        navigator.clipboard.writeText(this.currentJobId)
+          .then(() => {
+            alert('任务ID已复制到剪贴板');
+          })
+          .catch(err => {
+            console.error('复制失败:', err);
+            alert('复制失败，请手动复制');
+          });
       }
     },
 
@@ -1561,6 +1583,51 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .clear-history-btn:hover { background: #c82333; transform: translateY(-2px); }
 
 @media (max-width: 1200px) { .main-content-wrapper { flex-direction: column; } .scene-container-wrapper { min-width: 100%; } .right-panel { width: 100%; max-height: none; } }
+
+.job-id-container {
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.job-id-text {
+  background-color: #f8f9fa;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  word-break: break-all;
+}
+
+.copy-btn {
+  padding: 0.5rem 1rem;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.copy-btn:hover {
+  background-color: #5a67d8;
+}
+
+.job-id-hint {
+  font-size: 0.9rem;
+  color: #868e96;
+  margin-top: -1.5rem; /* Adjust to pull it closer */
+  margin-bottom: 2rem;
+  text-align: center;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media (max-width: 768px) {
   .app-header h1 { font-size: 2rem; }
   .upload-section { width: 95%; padding: 1.5rem; }

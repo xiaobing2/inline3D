@@ -139,6 +139,12 @@ import { API_BASE } from '../config.js'
 
 export default {
   name: 'HomePage',
+  mounted() {
+    // 预热请求，访问后端根目录，忽略结果
+    fetch(API_BASE).catch(err => {
+      console.warn('Backend pre-flight request failed:', err);
+    });
+  },
   data() {
     return {
       // 文字生成
