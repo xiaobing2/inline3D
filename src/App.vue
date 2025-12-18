@@ -53,7 +53,18 @@
       <div class="main-content-wrapper">
         <!-- 左侧：3D场景容器 -->
         <div class="scene-container-wrapper">
-          <div ref="threeContainer" class="three-container"></div>
+                    <div ref="threeContainer" class="three-container"></div>
+          <!-- 模型加载遮罩 -->
+          <div v-if="isModelLoading" class="loading-overlay">
+            <div class="loading-content">
+              <div class="spinner"></div>
+              <p>正在加载模型...</p>
+              <div class="loading-progress-bar">
+                <div class="loading-progress" :style="{ width: modelLoadProgress + '%' }"></div>
+              </div>
+              <p>{{ modelLoadProgress }}%</p>
+            </div>
+          </div>
         </div>
         
         <!-- 右侧：功能面板 -->
@@ -464,6 +475,7 @@ export default {
     return {
       currentJobId: null, // 当前任务ID
       isModelLoading: false, // 模型是否正在加载
+      modelLoadProgress: 0, // 模型加载进度
       currentPage: 'home', // 页面状态：home, text-to-3d, image-to-3d, room-editor, model-editor, model-status
       mixer: null,
       clock: null,
@@ -1205,43 +1217,53 @@ export default {
     // 从URL加载模型
     async loadModelFromUrl(modelUrl) {
       try {
-        this.uploadStatus = '正在加载模型...'
+        this.isModelLoading = true; // 显示加载遮罩
+        this.modelLoadProgress = 0;
+        this.uploadStatus = '正在加载模型...';
+
         if (this.loadedModel) {
-          this.modelGroup.remove(this.loadedModel)
-          this.loadedModel = null
+          this.modelGroup.remove(this.loadedModel);
+          this.loadedModel = null;
         }
-        if (this.mixer) { this.mixer.stopAllAction(); this.mixer = null }
-        const loader = new GLTFLoader()
+        if (this.mixer) { this.mixer.stopAllAction(); this.mixer = null; }
+
+        const loader = new GLTFLoader();
         loader.load(
           modelUrl,
-          (gltf) => {
-            this.loadedModel = gltf.scene
-            this.modelGroup.add(this.loadedModel)
-            this.applyShadows()
-            this.autoScaleAndPositionModel(this.loadedModel)
+          (gltf) => { // OnLoad
+            this.loadedModel = gltf.scene;
+            this.modelGroup.add(this.loadedModel);
+            this.applyShadows();
+            this.autoScaleAndPositionModel(this.loadedModel);
             if (gltf.animations && gltf.animations.length > 0) {
-              this.hasAnimation = true
-              this.animationPlaying = true
-              this.mixer = new THREE.AnimationMixer(gltf.scene)
-              this.clock = new THREE.Clock()
-              this.clipAction = this.mixer.clipAction(gltf.animations[0])
-              this.clipAction.play()
-            } else { this.hasAnimation = false; this.animationPlaying = false }
-            this.uploadStatus = '模型加载成功！'
-            setTimeout(() => { this.uploadStatus = null }, 5000)
+              this.hasAnimation = true;
+              this.animationPlaying = true;
+              this.mixer = new THREE.AnimationMixer(gltf.scene);
+              this.clock = new THREE.Clock();
+              this.clipAction = this.mixer.clipAction(gltf.animations[0]);
+              this.clipAction.play();
+            } else { this.hasAnimation = false; this.animationPlaying = false; }
+            this.uploadStatus = '模型加载成功！';
+            setTimeout(() => { this.uploadStatus = null; }, 5000);
+            this.isModelLoading = false; // 加载成功，隐藏遮罩
           },
-          (progress) => {
-            const percent = Math.round((progress.loaded / progress.total) * 100)
-            this.uploadStatus = `模型加载中... ${percent}%`
+          (progress) => { // OnProgress
+            if (progress.total > 0) {
+              const percent = Math.round((progress.loaded / progress.total) * 100);
+              this.modelLoadProgress = percent;
+              this.uploadStatus = `模型加载中... ${percent}%`;
+            }
           },
-          (error) => {
-            console.error('模型加载失败:', error)
-            this.uploadStatus = '模型加载失败，请稍后重试'
+          (error) => { // OnError
+            console.error('模型加载失败:', error);
+            this.uploadStatus = '模型加载失败，请稍后重试';
+            this.isModelLoading = false; // 加载失败，隐藏遮罩
           }
-        )
+        );
       } catch (error) {
-        console.error('加载模型失败:', error)
-        this.uploadStatus = '模型加载失败，请稍后重试'
+        console.error('加载模型失败:', error);
+        this.uploadStatus = '模型加载失败，请稍后重试';
+        this.isModelLoading = false; // 异常，隐藏遮罩
       }
     },
 
@@ -1627,6 +1649,56 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
   max-width: 400px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* 模型加载遮罩样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  color: white;
+  border-radius: 10px; /* 与容器保持一致 */
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid #fff;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-progress-bar {
+  width: 200px;
+  height: 10px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 1rem auto;
+}
+
+.loading-progress {
+  height: 100%;
+  background-color: #fff;
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 768px) {
