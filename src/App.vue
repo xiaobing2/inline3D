@@ -446,6 +446,7 @@ import { SimplifyModifier } from 'three/examples/jsm/modifiers/SimplifyModifier.
 import HomePage from './components/HomePage.vue'
 import TextTo3D from './components/TextTo3D.vue'
 import JoinRoom from './components/JoinRoom.vue'
+import { API_BASE } from './config.js'
 
 export default {
   name: 'App',
@@ -1236,6 +1237,14 @@ export default {
       }
     },
 
+        normalizeUrl(url) {
+      if (!url) return url
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return `http://${url}`
+      }
+      return url
+    },
+
     // 模型状态相关（保持原有逻辑）
     handleTextJobCreated(payload) {
       const jobId = (payload && payload.jobId) ? payload.jobId : (localStorage.getItem('modelJobId') || '')
@@ -1263,7 +1272,7 @@ export default {
       const jobId = localStorage.getItem('modelJobId')
       if (!jobId) { this.modelStatus.error = '未找到任务ID'; this.modelStatus.loading = false; return }
       try {
-        const response = await fetch('http://localhost:8082/api/models/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId }) })
+        const response = await fetch(`${API_BASE}/api/models/generate/getstatus`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId }) })
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const data = await response.json()
         let status = data.status
@@ -1300,8 +1309,16 @@ export default {
           this.modelStatus.loading = false; this.modelStatus.error = '模型生成失败，请稍后重试'; clearInterval(this.statusCheckTimer)
         } else if (status === 3) {
           this.modelStatus.loading = false; this.modelStatus.success = true; this.modelStatus.progress = 100; this.modelStatus.message = '模型生成成功！'
-          this.modelStatus.previewImageUrl = data.targetimgurl || ''
-          this.modelStatus.modelUrl = data.target3durl || ''
+          this.modelStatus.previewImageUrl = this.normalizeUrl(data.targetimgurl || '')
+          let modelUrl = ''
+          if (data.target3durl) {
+            const normalized = this.normalizeUrl(data.target3durl)
+            const base = normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
+            modelUrl = `${base}/${jobId}.glb`
+          } else {
+            modelUrl = `${API_BASE}/uploads/${jobId}/${jobId}.glb`
+          }
+          this.modelStatus.modelUrl = modelUrl
           clearInterval(this.statusCheckTimer)
         } else {
           this.modelStatus.loading = false; this.modelStatus.error = '未知的模型状态'; clearInterval(this.statusCheckTimer)

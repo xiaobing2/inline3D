@@ -7,58 +7,58 @@
 
     <!-- 页面内容 -->
     <div class="content">
-      <div class="hero-section">
-        <h1>AI+3D模型创建与编辑平台</h1>
-        <p>选择一种方式开始你的3D创作之旅</p>
-      </div>
-      
-      <div class="options-grid">
+    <div class="hero-section">
+      <h1>AI+3D模型创建与编辑平台</h1>
+      <p>选择一种方式开始你的3D创作之旅</p>
+    </div>
+    
+    <div class="options-grid">
         <!-- 文字描述生成（弹窗） -->
         <div class="option-card option-blue" @click="openPromptModal">
-          <div class="option-icon">
+        <div class="option-icon">
             <span class="icon-badge icon-blue">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
             </span>
-          </div>
-          <h2>文字描述生成</h2>
-          <p>输入文字描述，AI将为您创建3D模型</p>
         </div>
-        
+        <h2>文字描述生成</h2>
+        <p>输入文字描述，AI将为您创建3D模型</p>
+      </div>
+      
         <!-- 图像生成（弹窗） -->
         <div class="option-card option-purple" @click="openImageModal">
-          <div class="option-icon">
+        <div class="option-icon">
             <span class="icon-badge icon-purple">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
             </span>
-          </div>
-          <h2>图像生成</h2>
-          <p>上传图像，AI将为您生成3D模型</p>
         </div>
-        
+        <h2>图像生成</h2>
+        <p>上传图像，AI将为您生成3D模型</p>
+      </div>
+      
         <!-- 加入房间（弹窗） -->
         <div class="option-card option-pink" @click="openJoinModal">
-          <div class="option-icon">
+        <div class="option-icon">
             <span class="icon-badge icon-pink">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
             </span>
-          </div>
-          <h2>在线编辑</h2>
-          <p>输入房间号，在线编辑3D模型</p>
+        </div>
+        <h2>在线编辑</h2>
+        <p>输入房间号，在线编辑3D模型</p>
         </div>
       </div>
     </div>
@@ -135,6 +135,7 @@
 
 <script>
 import * as THREE from 'three'
+import { API_BASE } from '../config.js'
 
 export default {
   name: 'HomePage',
@@ -178,7 +179,7 @@ export default {
       if (!this.prompt.trim()) return
       this.isGenerating = true; this.errorMessage = null
       try {
-        const resp = await fetch('http://localhost:8082/api/models/generate/text', {
+        const resp = await fetch(`${API_BASE}/api/models/generate/text`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: this.prompt, format: 'glb' })
         })
         if (!resp.ok) { const msg = await resp.text().catch(() => ''); throw new Error(msg || `HTTP ${resp.status}`) }
@@ -211,7 +212,7 @@ export default {
         const fd = new FormData()
         fd.append('file', this.imageFile)
         fd.append('format', 'glb')
-        const resp = await fetch('http://localhost:8082/api/models/generate/image', { method: 'POST', body: fd })
+        const resp = await fetch(`${API_BASE}/api/models/generate/image`, { method: 'POST', body: fd })
         if (!resp.ok) { const msg = await resp.text().catch(() => ''); throw new Error(msg || `HTTP ${resp.status}`) }
         const data = await resp.json().catch(() => ({}))
         if (data && data.jobId) {
@@ -236,7 +237,7 @@ export default {
       if (!this.jobIdJoin.trim()) { this.joinError = '请输入有效的jobId'; return }
       this.joinLoading = true; this.joinError = null
       try {
-        const resp = await fetch('http://localhost:8082/api/models/generate/getstatus', {
+        const resp = await fetch(`${API_BASE}/api/models/generate/getstatus`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: this.jobIdJoin })
         })
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
@@ -263,7 +264,7 @@ export default {
             const base = normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
             modelUrl = `${base}/${this.jobIdJoin}.glb`
           } else {
-            modelUrl = `http://localhost:8082/uploads/${this.jobIdJoin}/${this.jobIdJoin}.glb`
+            modelUrl = `${API_BASE}/uploads/${this.jobIdJoin}/${this.jobIdJoin}.glb`
           }
           const previewImageUrl = data.targetimgurl ? this.normalizeUrl(data.targetimgurl) : ''
           this.$emit('load-model', { modelUrl, previewImageUrl, jobId: this.jobIdJoin })
@@ -312,7 +313,7 @@ export default {
             const base = normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
             modelUrl = `${base}/${this.jobIdJoin}.glb`
           } else {
-            modelUrl = `http://localhost:8082/uploads/${this.jobIdJoin}/${this.jobIdJoin}.glb`
+            modelUrl = `${API_BASE}/uploads/${this.jobIdJoin}/${this.jobIdJoin}.glb`
           }
           const previewImageUrl = data.targetimgurl ? this.normalizeUrl(data.targetimgurl) : ''
           this.$emit('load-model', { modelUrl, previewImageUrl, jobId: this.jobIdJoin })
